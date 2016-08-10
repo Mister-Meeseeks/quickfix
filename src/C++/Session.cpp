@@ -38,6 +38,8 @@ Mutex Session::s_mutex;
 #define LOGEX( method ) try { method; } catch( std::exception& e ) \
   { m_state.onEvent( e.what() ); }
 
+#define QUICKFIX_CME_MAX_SEQ_GAP 2500 
+  
 Session::Session( Application& application,
                   MessageStoreFactory& messageStoreFactory,
                   const SessionID& sessionID,
@@ -51,6 +53,7 @@ Session::Session( Application& application,
   m_senderDefaultApplVerID(ApplVerID_FIX50),
   m_targetDefaultApplVerID(ApplVerID_FIX50),
   m_sendRedundantResendRequests( false ),
+  m_useCMEResendFunctionality( false ),
   m_checkCompId( true ),
   m_checkLatency( true ), 
   m_maxLatency( 120 ),
@@ -356,6 +359,17 @@ void Session::nextResendRequest( const Message& resendRequest, const UtcTimeStam
        + IntConvertor::convert( beginSeqNo ) +
                    " TO: " + IntConvertor::convert( endSeqNo ) );
 
+  if (m_useCMEResendFunctionality) {
+    PossDupFlag possDupFlag;
+    if (resendRequest.getHeader().isSetField(possDupFlag)) {
+      resendRequest.getHeader().getField(possDupFlag);
+      if (possDupFlag == true) {
+	m_state.onEvent("Got duplicate resend request during active recovery. Ignoring.");
+	return;
+      }
+    }
+  }
+  
   std::string beginString = m_sessionID.getBeginString();
   if ( (beginString >= FIX::BeginString_FIX42 && endSeqNo == 0) ||
        (beginString <= FIX::BeginString_FIX42 && endSeqNo == 999999) ||
@@ -640,18 +654,23 @@ void Session::generateLogon( const Message& aLogon )
   m_state.sentLogon( true );
 }
 
-void Session::generateResendRequest( const BeginString& beginString, const MsgSeqNum& msgSeqNum )
+  void Session::generateResendRequest( const BeginString& beginString, const MsgSeqNum& msgSeqNum, bool doPossDupFlag )
 {
   Message resendRequest;
   BeginSeqNo beginSeqNo( ( int ) getExpectedTargetNum() );
   EndSeqNo endSeqNo( msgSeqNum - 1 );
-  if ( beginString >= FIX::BeginString_FIX42 )
+  int cmeMaxSeqNo = beginSeqNo + QUICKFIX_CME_MAX_SEQ_GAP - 1;
+  if ( m_useCMEResendFunctionality && endSeqNo > cmeMaxSeqNo)
+    endSeqNo = cmeMaxSeqNo;
+  else if ( beginString >= FIX::BeginString_FIX42 )
     endSeqNo = 0;
   else if( beginString <= FIX::BeginString_FIX41 )
     endSeqNo = 999999;
   resendRequest.getHeader().setField( MsgType( "2" ) );
   resendRequest.setField( beginSeqNo );
   resendRequest.setField( endSeqNo );
+  if (doPossDupFlag)
+    resendRequest.getHeader().setField( PossDupFlag(PossDupFlag_YES) );
   fill( resendRequest.getHeader() );
   sendRaw( resendRequest );
 
@@ -1129,13 +1148,18 @@ void Session::doTargetTooHigh( const Message& msg )
   {
     SessionState::ResendRange range = m_state.resendRange();
 
-    if( !m_sendRedundantResendRequests && msgSeqNum >= range.first )
+    if( msgSeqNum >= range.first )
     {
-          m_state.onEvent ("Already sent ResendRequest FROM: " +
-                           IntConvertor::convert (range.first) + " TO: " +
-                           IntConvertor::convert (range.second) +
-                           ".  Not sending another.");
-          return;
+      if (!m_sendRedundantResendRequests && !m_useCMEResendFunctionality) { 
+	m_state.onEvent ("Already sent ResendRequest FROM: " +
+			 IntConvertor::convert (range.first) + " TO: " +
+			 IntConvertor::convert (range.second) +
+			 ".  Not sending another.");
+	return;
+      } else if (m_useCMEResendFunctionality) {
+	generateResendRequest(beginString, range.second, true);
+	return;
+      }
     }
   }
 

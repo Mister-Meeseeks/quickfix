@@ -142,6 +142,11 @@ public:
   void setSendRedundantResendRequests ( bool value )
     { m_sendRedundantResendRequests = value; } 
 
+  bool getUseCMEResendFunctionality()
+    { return m_useCMEResendFunctionality; }
+  void setUseCMEResendFunctionality ( bool value )
+    { m_useCMEResendFunctionality = value; }
+  
   bool getCheckCompId()
     { return m_checkCompId; }
   void setCheckCompId ( bool value )
@@ -286,7 +291,7 @@ private:
 
   void generateLogon();
   void generateLogon( const Message& );
-  void generateResendRequest( const BeginString&, const MsgSeqNum& );
+  void generateResendRequest( const BeginString&, const MsgSeqNum&, bool doPossDupFlag=false );
   void generateSequenceReset( int, int );
   void generateHeartbeat();
   void generateHeartbeat( const Message& );
@@ -313,6 +318,7 @@ private:
   std::string m_senderDefaultApplVerID;
   std::string m_targetDefaultApplVerID;
   bool m_sendRedundantResendRequests;
+  bool m_useCMEResendFunctionality;
   bool m_checkCompId;
   bool m_checkLatency;
   int m_maxLatency;

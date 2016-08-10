@@ -170,6 +170,8 @@ Session* SessionFactory::create( const SessionID& sessionID,
 
   if ( settings.has( SEND_REDUNDANT_RESENDREQUESTS ) )
     pSession->setSendRedundantResendRequests( settings.getBool( SEND_REDUNDANT_RESENDREQUESTS ) );
+  if ( settings.has( USE_CME_RESEND_FUNCTIONALITY ) )
+    pSession->setUseCMEResendFunctionality( settings.getBool( USE_CME_RESEND_FUNCTIONALITY ) );
   if ( settings.has( CHECK_COMPID ) )
     pSession->setCheckCompId( settings.getBool( CHECK_COMPID ) );
   if ( settings.has( CHECK_LATENCY ) )
