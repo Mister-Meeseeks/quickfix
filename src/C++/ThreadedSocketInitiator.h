@@ -44,14 +44,16 @@ public:
   ThreadedSocketInitiator( Application&, MessageStoreFactory&,
                            const SessionSettings&,
                            LogFactory& ) throw( ConfigError );
-
+  
   virtual ~ThreadedSocketInitiator();
 
-private:
   typedef std::map < int, thread_id > SocketToThread;
   typedef std::map < SessionID, int > SessionToHostNum;
   typedef std::pair < ThreadedSocketInitiator*, ThreadedSocketConnection* > ThreadPair;
 
+  const SocketToThread& getThreads() const { return m_threads; }
+
+private:
   void onConfigure( const SessionSettings& ) throw ( ConfigError );
   void onInitialize( const SessionSettings& ) throw ( RuntimeError );
 

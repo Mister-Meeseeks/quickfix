@@ -63,6 +63,7 @@ public:
   bool sentLogout() { return m_state.sentLogout(); }
   bool receivedLogon() { return m_state.receivedLogon(); }
   bool isLoggedOn() { return receivedLogon() && sentLogon(); }
+  bool shouldSendReset();
   void reset() throw( IOException ) 
   { generateLogout(); disconnect(); m_state.reset(); }
   void refresh() throw( IOException )
@@ -71,7 +72,14 @@ public:
   { m_state.setNextSenderMsgSeqNum( num ); }
   void setNextTargetMsgSeqNum( int num ) throw( IOException )
   { m_state.setNextTargetMsgSeqNum( num ); }
-
+  void incrNextSenderMsgSeqNum() throw( IOException )
+  { m_state.incrNextSenderMsgSeqNum(); }
+  void incrNextTargetMsgSeqNum() throw( IOException )
+  { m_state.incrNextTargetMsgSeqNum(); }
+  
+  void lockSession() { m_mutex.lock(); }
+  void unlockSession() { m_mutex.unlock(); }
+  
   const SessionID& getSessionID() const
   { return m_sessionID; }
   void setDataDictionaryProvider( const DataDictionaryProvider& dataDictionaryProvider )
@@ -202,6 +210,7 @@ public:
   }
 
   bool send( Message& );
+  bool send( const std::string& );
   void next();
   void next( const UtcTimeStamp& timeStamp );
   void next( const std::string&, const UtcTimeStamp& timeStamp, bool queued = false );
@@ -221,7 +230,6 @@ private:
   static bool addSession( Session& );
   static void removeSession( Session& );
 
-  bool send( const std::string& );
   bool sendRaw( Message&, int msgSeqNum = 0 );
   bool resend( Message& message );
   void persist( const Message&, const std::string& ) throw ( IOException );
@@ -255,7 +263,6 @@ private:
       m_sessionID.getSenderCompID().getValue() == targetCompID.getValue()
       && m_sessionID.getTargetCompID().getValue() == senderCompID.getValue();
   }
-  bool shouldSendReset();
 
   bool validLogonState( const MsgType& msgType );
   void fromCallback( const MsgType& msgType, const Message& msg,
