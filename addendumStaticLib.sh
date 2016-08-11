@@ -15,4 +15,8 @@ targetLibDir=/usr/local/lib/
 # the C++ library directory.
 ar -rcs $cLibDir/libquickfix.a $cLibDir/*.o
 
+# Remove any installed shared libs, so that compilation uses static library.
+rm $tagetLibDir/libquickfix*
+
 cp $cLibDir/libquickfix.a $targetLibDir/
+
