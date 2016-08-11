@@ -16,7 +16,7 @@ targetLibDir=/usr/local/lib/
 ar -rcs $cLibDir/libquickfix.a $cLibDir/*.o
 
 # Remove any installed shared libs, so that compilation uses static library.
-rm $tagetLibDir/libquickfix*
+rm $targetLibDir/libquickfix*
 
 cp $cLibDir/libquickfix.a $targetLibDir/
 
